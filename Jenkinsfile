@@ -11,6 +11,12 @@ pipeline {
             }
         }
 
+        stage('Docker Check'){
+            steps{
+                bat 'docker version'
+            }
+        }
+
         stage('Build') {
             steps {
                 bat 'mvn clean compile'
