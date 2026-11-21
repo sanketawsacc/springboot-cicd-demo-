@@ -34,6 +34,12 @@ pipeline {
             }
         }
 
+        stage('Docker Build'){
+            steps{
+                bat 'docker build -t springboot-cicd-demo:1.2 .'
+            }
+        }
+
         stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar',
