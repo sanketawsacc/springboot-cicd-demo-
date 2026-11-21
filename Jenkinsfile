@@ -40,6 +40,15 @@ pipeline {
             }
         }
 
+        stage('Deploy') {
+            steps {
+                bat '''
+                    docker rm -f springboot-demo 2>NUL || echo No previous container found
+                    docker run -d --name springboot-demo -p 8082:4000 springboot-cicd-demo:1.2
+                '''
+            }
+        }
+
         stage('Archive') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar',
