@@ -85,9 +85,12 @@ pipeline {
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
                     powershell '''
+                        $aws = "C:\\Program Files\\Amazon\\AWSCLIV2\\aws.exe"
                         $region = "ap-southeast-2"
                         $instanceId = "i-00c42fb63c9f72d41"
                         $image = "448678333371.dkr.ecr.ap-southeast-2.amazonaws.com/springboot-cicd-demo:1.2"
+
+                        $env:AWS_DEFAULT_REGION = $region
 
                         $commands = @(
                             "docker pull $image",
@@ -100,7 +103,7 @@ pipeline {
                             commands = $commands
                         } | ConvertTo-Json -Compress
 
-                        $commandId = aws ssm send-command `
+                        $commandId = & $aws ssm send-command `
                             --region $region `
                             --instance-ids $instanceId `
                             --document-name "AWS-RunShellScript" `
@@ -109,16 +112,20 @@ pipeline {
                             --query "Command.CommandId" `
                             --output text
 
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "Failed to send SSM deployment command"
+                        }
+
                         Write-Host "SSM Command ID: $commandId"
 
                         if (!$commandId -or $commandId -eq "None") {
-                            throw "Failed to send deployment command"
+                            throw "SSM Command ID was not returned"
                         }
 
                         do {
                             Start-Sleep -Seconds 5
 
-                            $status = aws ssm get-command-invocation `
+                            $status = & $aws ssm get-command-invocation `
                                 --region $region `
                                 --command-id $commandId `
                                 --instance-id $instanceId `
@@ -133,7 +140,7 @@ pipeline {
                             throw "EC2 deployment failed with status: $status"
                         }
 
-                        $output = aws ssm get-command-invocation `
+                        $output = & $aws ssm get-command-invocation `
                             --region $region `
                             --command-id $commandId `
                             --instance-id $instanceId `
