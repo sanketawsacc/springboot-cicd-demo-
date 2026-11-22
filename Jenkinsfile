@@ -52,7 +52,7 @@ pipeline {
                         set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
                         set AWS_DEFAULT_REGION=ap-southeast-2
 
-                        "C:\Program Files\Amazon\AWSCLIV2\aws.exe" ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com
+                        "C:/Program Files/Amazon/AWSCLIV2/aws.exe" ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com
 
                         docker tag springboot-cicd-demo:1.2 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com/springboot-cicd-demo:1.2
 
