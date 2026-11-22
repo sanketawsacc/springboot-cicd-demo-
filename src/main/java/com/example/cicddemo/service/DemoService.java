@@ -10,7 +10,7 @@ import java.util.Map;
 public class DemoService {
 
     public String getWelcomeMessage() {
-        return "Welcome Sanket to Spring Boot CI/CD Demo!";
+        return "Welcome Sanket Godse to Spring Boot CI/CD Demo!";
     }
 
     public AppInfoResponse getApplicationInfo() {
