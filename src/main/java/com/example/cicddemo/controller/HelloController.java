@@ -11,5 +11,5 @@ public class HelloController {
         return "Hello! Spring Boot is running inside Docker 🚀";
     }
 
-    
+
 }
