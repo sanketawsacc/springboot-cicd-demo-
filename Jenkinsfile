@@ -77,12 +77,73 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to EC2') {
             steps {
-                bat '''
-                    docker rm -f springboot-demo 2>NUL || echo No previous container found
-                    docker run -d --name springboot-demo -p 8082:4000 springboot-cicd-demo:1.2
-                '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-ecr-credentials',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    powershell '''
+                        $region = "ap-southeast-2"
+                        $instanceId = "i-00c42fb63c9f72d41"
+                        $image = "448678333371.dkr.ecr.ap-southeast-2.amazonaws.com/springboot-cicd-demo:1.2"
+
+                        $commands = @(
+                            "docker pull $image",
+                            "docker rm -f springboot-demo || true",
+                            "docker run -d --restart unless-stopped --name springboot-demo -p 4000:4000 $image",
+                            "docker ps"
+                        )
+
+                        $parameters = @{
+                            commands = $commands
+                        } | ConvertTo-Json -Compress
+
+                        $commandId = aws ssm send-command `
+                            --region $region `
+                            --instance-ids $instanceId `
+                            --document-name "AWS-RunShellScript" `
+                            --parameters $parameters `
+                            --comment "Jenkins EC2 deployment" `
+                            --query "Command.CommandId" `
+                            --output text
+
+                        Write-Host "SSM Command ID: $commandId"
+
+                        if (!$commandId -or $commandId -eq "None") {
+                            throw "Failed to send deployment command"
+                        }
+
+                        do {
+                            Start-Sleep -Seconds 5
+
+                            $status = aws ssm get-command-invocation `
+                                --region $region `
+                                --command-id $commandId `
+                                --instance-id $instanceId `
+                                --query "Status" `
+                                --output text
+
+                            Write-Host "Deployment status: $status"
+
+                        } while ($status -in @("Pending", "InProgress", "Delayed"))
+
+                        if ($status -ne "Success") {
+                            throw "EC2 deployment failed with status: $status"
+                        }
+
+                        $output = aws ssm get-command-invocation `
+                            --region $region `
+                            --command-id $commandId `
+                            --instance-id $instanceId `
+                            --query "StandardOutputContent" `
+                            --output text
+
+                        Write-Host "EC2 Deployment Output:"
+                        Write-Host $output
+                    '''
+                }
             }
         }
 
