@@ -11,8 +11,8 @@ pipeline {
             }
         }
 
-        stage('Docker Check'){
-            steps{
+        stage('Docker Check') {
+            steps {
                 bat 'docker version'
             }
         }
@@ -22,6 +22,7 @@ pipeline {
                 bat 'mvn clean compile'
             }
         }
+
         stage('Test') {
             steps {
                 bat 'mvn test'
@@ -34,8 +35,8 @@ pipeline {
             }
         }
 
-        stage('Docker Build'){
-            steps{
+        stage('Docker Build') {
+            steps {
                 bat 'docker build -t springboot-cicd-demo:1.2 .'
             }
         }
@@ -48,8 +49,6 @@ pipeline {
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
                     bat '''
-                        set AWS_ACCESS_KEY_ID=%AWS_ACCESS_KEY_ID%
-                        set AWS_SECRET_ACCESS_KEY=%AWS_SECRET_ACCESS_KEY%
                         set AWS_DEFAULT_REGION=ap-southeast-2
 
                         "C:/Program Files/Amazon/AWSCLIV2/aws.exe" ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com
@@ -57,6 +56,22 @@ pipeline {
                         docker tag springboot-cicd-demo:1.2 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com/springboot-cicd-demo:1.2
 
                         docker push 448678333371.dkr.ecr.ap-southeast-2.amazonaws.com/springboot-cicd-demo:1.2
+                    '''
+                }
+            }
+        }
+
+        stage('SSM Connectivity Test') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-ecr-credentials',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    bat '''
+                        set AWS_DEFAULT_REGION=ap-southeast-2
+
+                        "C:/Program Files/Amazon/AWSCLIV2/aws.exe" ssm describe-instance-information --filters "Key=InstanceIds,Values=i-00c42fb63c9f72d41" --query "InstanceInformationList[*].[InstanceId,PingStatus]" --output table
                     '''
                 }
             }
