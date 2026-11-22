@@ -101,13 +101,21 @@ pipeline {
 
                         $parameters = @{
                             commands = $commands
-                        } | ConvertTo-Json -Compress
+                        }
+
+                        $json = $parameters | ConvertTo-Json -Depth 5
+
+                        $jsonFile = Join-Path $env:WORKSPACE "ssm-parameters.json"
+                        $json | Set-Content -Path $jsonFile -Encoding ascii
+
+                        Write-Host "SSM parameters JSON:"
+                        Get-Content $jsonFile
 
                         $commandId = & $aws ssm send-command `
                             --region $region `
                             --instance-ids $instanceId `
                             --document-name "AWS-RunShellScript" `
-                            --parameters $parameters `
+                            --parameters "file://$jsonFile" `
                             --comment "Jenkins EC2 deployment" `
                             --query "Command.CommandId" `
                             --output text
